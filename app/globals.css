@@ -1,0 +1,98 @@
+:root {
+  --background: #0E0F1A; /* your very dark bg */
+  --foreground: #D1D5DB; /* light gray text */
+  --primary: #2F7BFF; /* bright blue for buttons */
+  --primary-dark: #265FCC; /* a darker blue variant */
+  --primary-light: #5FA1FF; /* lighter blue for hover */
+  
+  /* Gradient colors for “Merger” text or highlights */
+  --gradient-start: #7C3AED; /* electric violet */
+  --gradient-mid: #D946EF;   /* magenta */
+  --gradient-end: #EC4899;   /* pink */
+  
+  --text-base: 1.125rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0E0F1A; /* same dark bg always */
+    --foreground: #D1D5DB;
+    --primary: #2F7BFF;
+    --primary-dark: #265FCC;
+    --primary-light: #5FA1FF;
+  }
+}
+
+/* Background and text */
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: var(--text-base);
+  line-height: 1.75;
+}
+
+/* Gradient animation for gradient text */
+.animate-gradient {
+  background-image: linear-gradient(to right, var(--gradient-start), var(--gradient-mid), var(--gradient-end));
+  
+  /* Standard property */
+  background-clip: text;
+  
+  /* WebKit prefix for Safari */
+  -webkit-background-clip: text;
+  
+  /* Make text transparent to show the background gradient */
+  color: transparent;
+  
+  /* WebKit prefix for text fill color */
+  -webkit-text-fill-color: transparent;
+}
+
+
+/* Buttons */
+button.primary {
+  background-color: var(--primary);
+  color: white;
+  box-shadow: 0 0 5px transparent;
+  transition: box-shadow 0.3s ease;
+}
+
+button.primary:hover {
+  box-shadow: 0 0 15px var(--primary);
+  transform: translateY(-2px);
+}
+
+button.outlined {
+  border: 2px solid var(--primary);
+  color: var(--primary);
+  background: transparent;
+}
+
+button.outlined:hover {
+  background: var(--primary);
+  color: white;
+  transform: translateY(-2px);
+}
+
+/* Links */
+a {
+  color: var(--primary);
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+a:hover {
+  color: var(--primary-light);
+}
+
+/* Icons sizing and color */
+.icon {
+  width: 32px;
+  height: 32px;
+  color: var(--primary);
+}
+
+/* For gradient text icons (tricky, usually easier to use plain colors) */

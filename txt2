@@ -1,0 +1,469 @@
+"use client";
+import React, { useState, ChangeEvent, DragEvent, CSSProperties, useEffect } from "react";
+import {
+  DocumentTextIcon,
+  ArrowUpOnSquareIcon,
+  Bars3Icon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
+import { SignedOut, SignedIn, SignInButton, UserButton } from "@clerk/clerk-react";
+import { PDFDocument } from "pdf-lib";
+
+const styles = {
+  page: {
+    fontFamily: "Inter, sans-serif",
+    backgroundColor: "#12121d",
+    minHeight: "100vh",
+    color: "white",
+  },
+  nav: {
+    display: "flex",
+    alignItems: "center",
+    padding: "1rem 2rem",
+    borderBottom: "1px solid #2f7bff44",
+    position: "sticky" as const,
+    top: 0,
+    backgroundColor: "#12121d",
+    zIndex: 1000,
+  },
+  navLogoContainer: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+  },
+  navLinksContainer: {
+    display: "flex",
+    gap: 24,
+  },
+  navLink: {
+    cursor: "pointer",
+    color: "inherit",
+    textDecoration: "none",
+    fontWeight: 600,
+    fontSize: 16,
+  },
+  mobileMenuButton: {
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    marginLeft: "auto",
+  },
+  mobileMenu: {
+    display: "flex",
+    flexDirection: "column" as const,
+    backgroundColor: "#1f2937",
+    position: "absolute" as const,
+    top: 64,
+    right: 0,
+    width: "100%",
+    padding: 16,
+    gap: 16,
+    zIndex: 999,
+  },
+  signInButton: {
+    backgroundColor: "#2F7BFF",
+    border: "none",
+    borderRadius: 4,
+    color: "white",
+    padding: "8px 16px",
+    cursor: "pointer",
+    fontWeight: 600,
+  },
+  signInButtonHover: {
+    backgroundColor: "#1c5fd9",
+  },
+  hero: {
+    padding: "3rem 2rem",
+    textAlign: "center" as const,
+  },
+  heroTitle: {
+    fontSize: "2.5rem",
+    marginBottom: 12,
+  },
+  heroSubcopy: {
+    fontSize: "1.125rem",
+    color: "#a1a1aa",
+  },
+  uploadCard: {
+    marginTop: 45,
+    width: 400,
+    maxWidth: "100%",
+    backgroundColor: "#12121d",
+    borderRadius: 12,
+    border: "2px dotted #8a2be2",
+    padding: 24,
+    cursor: "pointer",
+    userSelect: "none",
+    color: "#a1a1aa",
+    display: "flex",
+    flexDirection: "column" as const,
+    alignItems: "center",
+    textAlign: "center" as const,
+  } as CSSProperties,
+  uploadIcon: { width: 48, height: 48, marginBottom: 12, stroke: "#8a2be2" },
+  uploadTextMain: { fontSize: "1.125rem", marginBottom: 4 },
+  uploadTextSub: { fontSize: "0.875rem", marginBottom: 16, color: "#6b7280" },
+  uploadButton: {
+    backgroundColor: "#2F7BFF",
+    color: "white",
+    border: "none",
+    padding: "0.5rem 1.5rem",
+    borderRadius: 9999,
+    cursor: "pointer",
+    fontWeight: 600,
+    fontSize: "1rem",
+  },
+  uploadNote: { marginTop: 12, fontSize: "0.75rem", color: "#4b5563" },
+  fileList: {
+    marginTop: 20,
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: 12,
+  },
+  fileItem: {
+    backgroundColor: "#22222b",
+    padding: 12,
+    borderRadius: 8,
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  fileRemoveBtn: {
+    background: "none",
+    border: "none",
+    color: "#ff4d4d",
+    cursor: "pointer",
+    fontSize: 20,
+    lineHeight: 1,
+  },
+  mergeButton: {
+    marginTop: 24,
+    padding: "12px 36px",
+    backgroundColor: "#2F7BFF",
+    border: "none",
+    borderRadius: 8,
+    color: "white",
+    cursor: "pointer",
+    fontWeight: 700,
+    fontSize: 16,
+  },
+  section: {
+    padding: "4rem 2rem",
+  },
+  sectionTitleLeft: {
+    fontSize: 24,
+    marginBottom: 24,
+    fontWeight: 700,
+  },
+  featureGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))",
+    gap: 40,
+    marginTop: 24,
+  },
+  featureItem: {
+    backgroundColor: "#12121d",
+    padding: 20,
+    borderRadius: 12,
+    boxShadow: "0 0 8px #2f7bffbb",
+    textAlign: "center" as const,
+  },
+  featureTitle: {
+    fontWeight: 700,
+    fontSize: "1.25rem",
+    marginBottom: 12,
+  },
+  featureText: {
+    color: "#a1a1aa",
+    fontSize: "1rem",
+  },
+  buttonOutline: {
+    border: "2px solid #2F7BFF",
+    borderRadius: 8,
+    color: "#2F7BFF",
+    padding: "10px 20px",
+    cursor: "pointer",
+    fontWeight: 700,
+    textDecoration: "none",
+    display: "inline-block",
+    transition: "background-color 0.3s, color 0.3s",
+  },
+};
+
+export default function PDFMergerLanding() {
+  const [hoveredButton, setHoveredButton] = useState<string | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [dragActive, setDragActive] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [mergedPdfUrl, setMergedPdfUrl] = useState<string | null>(null);
+  const [merging, setMerging] = useState(false);
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files?.length) {
+      setSelectedFiles((prev) => [...prev, ...Array.from(files)]);
+      setMergedPdfUrl(null); // reset preview when adding files
+    }
+  };
+
+  const handleDragOver = (e: DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    setDragActive(true);
+  };
+
+  const handleDragLeave = (e: DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    setDragActive(false);
+  };
+
+  const handleDrop = (e: DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    setDragActive(false);
+    if (e.dataTransfer.files) {
+      setSelectedFiles((prev) => [...prev, ...Array.from(e.dataTransfer.files)]);
+      setMergedPdfUrl(null); // reset preview on drop
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+    setMergedPdfUrl(null); // reset preview when removing files
+  };
+
+  // Merge PDFs with pdf-lib
+  const mergeFiles = async () => {
+    if (selectedFiles.length < 2) return;
+    setMerging(true);
+
+    try {
+      const mergedPdf = await PDFDocument.create();
+
+      for (const file of selectedFiles) {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await PDFDocument.load(arrayBuffer);
+        const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+        copiedPages.forEach((page) => mergedPdf.addPage(page));
+      }
+
+      const mergedPdfBytes = await mergedPdf.save();
+
+      const blob = new Blob([mergedPdfBytes], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+
+      setMergedPdfUrl(url);
+    } catch (error) {
+      alert("Error merging PDFs, try again.");
+      console.error(error);
+    } finally {
+      setMerging(false);
+    }
+  };
+
+  // Cleanup blob URLs on unmount or url change
+  useEffect(() => {
+    return () => {
+      if (mergedPdfUrl) {
+        URL.revokeObjectURL(mergedPdfUrl);
+      }
+    };
+  }, [mergedPdfUrl]);
+
+  const handleLinkClick = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: "smooth" });
+    setMenuOpen(false);
+  };
+
+  return (
+    <div style={styles.page}>
+      <nav style={styles.nav}>
+        <div style={styles.navLogoContainer}>
+          <DocumentTextIcon style={{ width: 28, height: 28, color: "#8a2be2" }} />
+          <h1
+            style={{
+              margin: 0,
+              fontWeight: "bold",
+              fontSize: "1.5rem",
+              background: "linear-gradient(90deg, #8e44ad, #e91e63)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+            }}
+          >
+            PDF Merger
+          </h1>
+        </div>
+
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 16 }}>
+          <SignedOut>
+            <SignInButton>
+              <button
+                style={{
+                  ...styles.signInButton,
+                  ...(hoveredButton === "signin" ? styles.signInButtonHover : {}),
+                }}
+                onMouseEnter={() => setHoveredButton("signin")}
+                onMouseLeave={() => setHoveredButton(null)}
+              >
+                Sign In
+              </button>
+            </SignInButton>
+          </SignedOut>
+          <SignedIn>
+            <UserButton />
+          </SignedIn>
+
+          <button
+            aria-label="Toggle menu"
+            style={styles.mobileMenuButton}
+            onClick={() => setMenuOpen((o) => !o)}
+          >
+            {menuOpen ? (
+              <XMarkIcon style={{ width: 32, height: 32 }} />
+            ) : (
+              <Bars3Icon style={{ width: 32, height: 32 }} />
+            )}
+          </button>
+        </div>
+      </nav>
+
+      {menuOpen && (
+        <div style={styles.mobileMenu}>
+          <a
+            href="#features"
+            style={styles.navLink}
+            onClick={(e) => {
+              e.preventDefault();
+              handleLinkClick("features");
+            }}
+          >
+            Features
+          </a>
+          <a
+            href="#upload"
+            style={styles.navLink}
+            onClick={(e) => {
+              e.preventDefault();
+              handleLinkClick("upload");
+            }}
+          >
+            Upload
+          </a>
+        </div>
+      )}
+
+      <main>
+        <section style={styles.hero}>
+          <h2 style={styles.heroTitle}>Merge your PDF files instantly</h2>
+          <p style={styles.heroSubcopy}>
+            Upload, merge, and download your PDFs without hassle.
+          </p>
+        </section>
+
+        <section id="features" style={styles.section}>
+          <h3 style={styles.sectionTitleLeft}>Features</h3>
+          <div style={styles.featureGrid}>
+            <div style={styles.featureItem}>
+              <DocumentTextIcon style={{ width: 48, height: 48, marginBottom: 16, stroke: "#8a2be2" }} />
+              <h4 style={styles.featureTitle}>Fast PDF Merge</h4>
+              <p style={styles.featureText}>
+                Merge multiple PDFs quickly in the browser without uploading your files.
+              </p>
+            </div>
+            <div style={styles.featureItem}>
+              <ArrowUpOnSquareIcon style={{ width: 48, height: 48, marginBottom: 16, stroke: "#8a2be2" }} />
+              <h4 style={styles.featureTitle}>Easy Upload</h4>
+              <p style={styles.featureText}>
+                Drag & drop or browse files to upload PDFs effortlessly.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section id="upload" style={{ ...styles.section, textAlign: "center" }}>
+          <label
+            htmlFor="file-upload"
+            style={{
+              ...styles.uploadCard,
+              borderColor: dragActive ? "#6f42c1" : "#8a2be2",
+              backgroundColor: dragActive ? "#211f2f" : "#12121d",
+            }}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            <DocumentTextIcon style={styles.uploadIcon} />
+            <p style={styles.uploadTextMain}>Drag & drop PDF files here</p>
+            <p style={styles.uploadTextSub}>or</p>
+            <button
+              type="button"
+              style={styles.uploadButton}
+              onClick={() => document.getElementById("file-upload")?.click()}
+            >
+              Browse Files
+            </button>
+            <input
+              id="file-upload"
+              type="file"
+              accept="application/pdf"
+              multiple
+              style={{ display: "none" }}
+              onChange={handleFileChange}
+            />
+            <p style={styles.uploadNote}>Supports multiple PDFs at once</p>
+          </label>
+
+          {selectedFiles.length > 0 && (
+            <div style={styles.fileList}>
+              {selectedFiles.map((file, idx) => (
+                <div key={idx} style={styles.fileItem}>
+                  <span>{file.name}</span>
+                  <button
+                    aria-label={`Remove ${file.name}`}
+                    style={styles.fileRemoveBtn}
+                    onClick={() => removeFile(idx)}
+                  >
+                    &times;
+                  </button>
+                </div>
+              ))}
+
+              <button
+                style={{
+                  ...styles.mergeButton,
+                  opacity: merging ? 0.7 : 1,
+                  cursor: merging ? "not-allowed" : "pointer",
+                }}
+                onClick={mergeFiles}
+                disabled={selectedFiles.length < 2 || merging}
+              >
+                {merging ? "Merging..." : "Merge PDFs"}
+              </button>
+            </div>
+          )}
+
+          {mergedPdfUrl && (
+            <div style={{ marginTop: 30 }}>
+              <h3 style={{ marginBottom: 12, color: "#8a2be2" }}>Preview of merged PDF</h3>
+              <iframe
+                src={mergedPdfUrl}
+                title="Merged PDF preview"
+                style={{ width: "100%", height: 500, borderRadius: 12, border: "1px solid #8a2be2" }}
+              />
+              <a
+                href={mergedPdfUrl}
+                download="merged.pdf"
+                style={{
+                  ...styles.buttonOutline,
+                  marginTop: 16,
+                  display: "inline-block",
+                }}
+              >
+                Download Merged PDF
+              </a>
+            </div>
+          )}
+        </section>
+      </main>
+    </div>
+  );
+}
